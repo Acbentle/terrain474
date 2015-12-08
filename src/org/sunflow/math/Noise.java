@@ -115,4 +115,15 @@ public class Noise {
 		}
 		return sum;
 	}
+	
+	static public double sharpNoise(double x, double y, int octaves, double amp, double gain, double freq, double lac) {
+		double sum = 0.0;
+		for (int i = 0; i < octaves; ++i) {
+			sum += (1.0 - Math.abs(noise(x * freq, y * freq) * 2.0 - 1.0)) * amp;
+			amp *= gain;
+			freq *= lac;
+		}
+		return sum;
+		
+	}
 }
