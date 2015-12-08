@@ -57,21 +57,30 @@ public class Terrain implements PrimitiveList {
 	}
 	
 	private double height(double x, double y) {
+		double height = 0.0;
+		
 		double mountain = Noise.simplexNoise(x, y, 8, 1.0, 0.4, 0.001, 3);
 		mountain = Math.pow(mountain, 2) * 24;
-		mountain = lerp(mountain, roundTo(mountain, 5.0f), 0.25);
+		mountain = lerp(mountain, roundTo(mountain, 8.0f), 0.25);
 		
-		double sanddune = Noise.sharpNoise(x, y, 4, 10.0, 0.4, 0.001, 3);
+		double rocks = Noise.simplexNoise(x, y, 3, 1.0, 0.4, 0.05, 3);
+		rocks = Math.pow(rocks, 4) * 0.5;
+		mountain += rocks;
+		
+		
+		double sanddune = Noise.sharpNoise(x, y, 3, 15.0, 0.4, 0.001, 3);
 		sanddune += Noise.simplexNoise(x, y, 2, 0.02, 0.4, 1, 3);
 		
-		return Math.max(mountain, sanddune);
+		height = Math.max(mountain, sanddune);
+		
+		return height;
 	}
 	
 	float distPlane(float x, float y, float z) {
 	    return (float) (z - height(x, y));
 	}
 	
-	int MAX_ITERATIONS = 200;
+	int MAX_ITERATIONS = 500;
 	
 	float startDelta = 0.5f;
 	float stopDelta = 5000.0f;
