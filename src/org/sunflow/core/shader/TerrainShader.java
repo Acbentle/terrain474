@@ -36,12 +36,12 @@ public class TerrainShader implements Shader {
     	Color color = Color.blend(dirt, sand, Math.max(Math.min(n.z * n.z * n.z * 0.8f, 1f), 0f));
     	
     	if (heightShade) {
-    		color = Color.blend(color, dirt, Math.max(Math.min(p.z / 30f, 1f), 0f));
+    		color = Color.blend(color, dirt, Math.max(Math.min(p.z / 100f, 1f), 0f));
     	}
     	
-    	if (Math.random() < 0.1) {
-    		Color.mul(2.0f, color, color);
-    	}
+//    	if ( < 0.01) {
+//    		Color.mul(1.0f + (float)Math.pow(Math.random(), 10) * 3.0f, color, color);
+//    	}
     	
         return color;
     }

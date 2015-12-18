@@ -209,11 +209,14 @@ public class SunSkyLight implements LightSource, PrimitiveList, Shader {
     }
 
     private Color getSkyRGB(Vector3 dir) {
-        if (dir.z < 0)
-            return Color.BLACK;
-        if (dir.z < 0.001f)
-            dir.z = 0.001f;
-        dir.normalize();
+//        if (dir.z < 0)
+//            return Color.RED;
+//        if (dir.z < 0.001f)
+//            dir.z = 0.001f;
+    	dir.normalize();
+    	if (dir.z < 0.06f)
+    		return Color.WHITE;
+        
         double theta = Math.acos(MathUtils.clamp(dir.z, -1, 1));
         double gamma = Math.acos(MathUtils.clamp(Vector3.dot(dir, sunDir), -1, 1));
         double x = perezFunction(perezx, theta, gamma, zenithx);
@@ -295,11 +298,11 @@ public class SunSkyLight implements LightSource, PrimitiveList, Shader {
 //                LightSample dest = new LightSample();
 //                dest.setShadowRay(new Ray(state.getPoint(), dir));
 //                dest.getShadowRay().setMax(Float.MAX_VALUE);
-//                
+                
 //				Vector3 sampleNorm = new Vector3((float)randX, (float)randY, 1.0f);
 //				sampleNorm.normalize();
-//                
-//                Color radiance = getSkyRGB(sampleNorm);
+                
+//                Color radiance = getSkyRGB(localDir);
 //                dest.setRadiance(radiance, radiance);
 //                dest.getDiffuseRadiance().mul(invP);
 //                dest.getSpecularRadiance().mul(invP);
@@ -336,7 +339,9 @@ public class SunSkyLight implements LightSource, PrimitiveList, Shader {
     }
 
     public Color getRadiance(ShadingState state) {
-        return getSkyRGB(basis.untransform(state.getRay().getDirection())).constrainRGB();
+    	return getSkyRGB(state.getRay().getDirection());
+//    	return Color.WHITE;
+//        return getSkyRGB(basis.untransform(state.getRay().getDirection())).constrainRGB();
     }
 
     public void scatterPhoton(ShadingState state, Color power) {

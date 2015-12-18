@@ -27,7 +27,6 @@ public class Noise {
 	}
 
 	static public double noise(double vx, double vy) {
-	    // First corner
 	    double dotVCYY = dot2(vx, vy, cy, cy);
 	    double ix = Math.floor(vx + dotVCYY);
 	    double iy = Math.floor(vy + dotVCYY);
@@ -35,11 +34,8 @@ public class Noise {
 	    double x0x = vx - ix + dotICXX;
 	    double x0y = vy - iy + dotICXX;
 
-	    // Other corners
 	    double i1x = 0.0;
 	    double i1y = 0.0;
-	    // i1.x = step( x0.y, x0.x ) // x0.x > x0.y ? 1.0 : 0.0
-	    // i1.y = 1.0 - i1.x
 	    if (x0x > x0y) {
 	        i1x = 1.0;
 	        i1y = 0.0;
@@ -47,9 +43,6 @@ public class Noise {
 	        i1x = 0.0;
 	        i1y = 1.0;
 	    }
-	    // x0 = x0 - 0.0 + 0.0 * C.xx
-	    // x1 = x0 - i1 + 1.0 * C.xx
-	    // x2 = x0 - 1.0 + 2.0 * C.xx
 	    double x12x = x0x + cx;
 	    double x12y = x0y + cx;
 	    double x12z = x0x + cz;
@@ -57,8 +50,7 @@ public class Noise {
 	    x12x = x12x - i1x;
 	    x12y = x12y - i1y;
 
-	    // Permutations
-	    ix = mod289(ix); // Avoid truncation effects in permutation
+	    ix = mod289(ix);
 	    iy = mod289(iy);
 
 	    double ppx = permute(0.0 + iy);
@@ -78,8 +70,6 @@ public class Noise {
 	    mz = mz * mz;
 	    mz = mz * mz;
 
-	    // Gradients: 41 points uniformly over a line, mapped onto a diamond.
-	    // The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
 	    double xx = 2.0 * fract(px * cw) - 1.0;
 	    double xy = 2.0 * fract(py * cw) - 1.0;
 	    double xz =  2.0 * fract(pz * cw) - 1.0;
@@ -92,13 +82,10 @@ public class Noise {
 	    double a0y = xy - Math.floor(xy + 0.5);
 	    double a0z = xz - Math.floor(xz + 0.5);
 
-	    // Normalise gradients implicitly by scaling m
-	    // Approximation of: m *= inversesqrt( a0*a0 + h*h )
 	    mx = mx * (1.79284291400159 - 0.85373472095314 * (a0x * a0x + hx * hx));
 	    my = my * (1.79284291400159 - 0.85373472095314 * (a0y * a0y + hy * hy));
 	    mz = mz * (1.79284291400159 - 0.85373472095314 * (a0z * a0z + hz * hz));
 
-	    // Compute final noise value at P
 	    double gx = a0x * x0x + hx * x0y;
 	    double gy = a0y * x12x + hy * x12y;
 	    double gz = a0z * x12z + hz * x12w;

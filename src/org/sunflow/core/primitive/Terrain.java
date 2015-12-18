@@ -19,7 +19,7 @@ import org.sunflow.math.OrthoNormalBasis;
 import org.sunflow.math.Point3;
 import org.sunflow.math.Vector3;
 
-public class Terrain implements PrimitiveList, Shader {
+public class Terrain implements PrimitiveList {
 	private float eps = 0.01f;
 
     public Terrain() {
@@ -61,18 +61,29 @@ public class Terrain implements PrimitiveList, Shader {
 		return x + (y - x) * t;
 	}
 	
+	double smoothstep(double edge0, double edge1, double x)
+	{
+	    // Scale, bias and saturate x to 0..1 range
+		
+	    x = Math.min(Math.max((x - edge0)/(edge1 - edge0), 0.0), 1.0); 
+	    // Evaluate polynomial
+	    return x*x*(3 - 2*x);
+	}
+	
+	private double roughMountain(double x, double y) {
+//		double mountain = Noise.simplexNoise(x, y, 2, 1.0, 0.25, 0.0004, 2);
+//		mountain = Math.pow(mountain, 4) * 300;
+		
+//		mountain += Noise.simplexNoise(x, y, 8, 10.0, 0.5, 0.004, 2);
+		
+//		return mountain;
+		return 0.0;
+	}
+	
 	private double rockHeight(double x, double y) {
 		double height = 0.0;
 
-		double mountain = Noise.simplexNoise(x, y, 7, 1.0, 0.4, 0.001, 3);
-		mountain = Math.pow(mountain, 2) * 50;
-		mountain = lerp(mountain, roundTo(mountain, 20.0f), 0.25);
-		height += mountain;
-		
-//		double rocks = Noise.simplexNoise(x, y, 1, 1.0, 0.4, 0.02, 3);
-//		rocks = Math.pow(rocks, 10);
-//		rocks = lerp(rocks, roundTo(rocks, 0.5), 1.0);
-//		height += rocks * 3.0;
+		height = roughMountain(x, y);
 		
 		return height;
 	}
@@ -80,10 +91,12 @@ public class Terrain implements PrimitiveList, Shader {
 	private double sandHeight(double x, double y) {
 		double height = 0.0;
 		
-		height = Noise.sharpNoise(x, y, 3, 15.0, 0.4, 0.001, 3);
-		height += Noise.simplexNoise(x, y, 2, 0.02, 0.4, 1, 3);
+		height = Noise.sharpNoise(x + 1000, y, 3, 1.0, 0.5, 0.0001, 2);
+		height = Math.pow(height, 2) * 200;
+		height += Noise.sharpNoise(x + 1000, y, 8, 10.0, 0.5, 0.001, 2);
+		height += Noise.simplexNoise(x, y, 2, 0.025, 0.4, 1, 3);
 		
-		return height;
+		return height + 50.0;
 	}
 	
 	private double height(double x, double y) {		
@@ -91,31 +104,30 @@ public class Terrain implements PrimitiveList, Shader {
 		return Math.max(rockHeight(x, y), sandHeight(x, y));
 	}
 	
-	float distPlane(float x, float y, float z) {
-	    return (float) (z - height(x, y));
+	double distPlane(double x, double y, double z) {
+	    return z - height(x, y);
 	}
 	
-	int MAX_ITERATIONS = 5000;
+	int MAX_ITERATIONS = 500;
 	
-	float startDelta = 0.5f;
-	float stopDelta = 100000.0f;
+	double startDelta = 0.1;
+	double stopDelta = 1000000.0;
 	
-	float computeDist(float x, float y, float z) {
-	    float dist = distPlane(x, y, z);
+	double computeDist(double x, double y, double z) {
+		double dist = distPlane(x, y, z);
 	    
 	    return dist;
 	}
 	
-	float getDistToObjects( Vector3 camPos, Vector3 rayDir ) {
-		float t = startDelta;
+	double getDistToObjects(Vector3 camPos, Vector3 rayDir ) {
+		double t = startDelta;
 		
 		for (int i = 0; i < MAX_ITERATIONS; ++i) {
-			float h = computeDist(camPos.x + rayDir.x * t, camPos.y + rayDir.y * t, camPos.z + rayDir.z * t);
-			if (h < (0.002 * t) || t > stopDelta)
-				break;
+			double h = computeDist(camPos.x + rayDir.x * t, camPos.y + rayDir.y * t, camPos.z + rayDir.z * t);
+			if (h < (0.002 * t) || t > stopDelta) break;
 			t += 0.5 * h;
 			if (i == MAX_ITERATIONS - 1) {
-				return 0.0f;
+				return stopDelta;
 			}
 		}
 		
@@ -139,46 +151,9 @@ public class Terrain implements PrimitiveList, Shader {
 	}
 	
     public void intersectPrimitive(Ray r, int primID, IntersectionState state) {
-		float t = getDistToObjects(new Vector3(r.ox, r.oy, r.oz), new Vector3(r.dx, r.dy, r.dz));
-		if (t < stopDelta * 0.5) {
-			state.setIntersection(0, t, 0);
-		}
-    }
-    
-    public void scatterPhoton(ShadingState state, Color power) {
-        Color kd = Color.WHITE;
-        // make sure we are on the right side of the material
-        if (Vector3.dot(state.getNormal(), state.getRay().getDirection()) > 0) {
-            state.getNormal().negate();
-            state.getGeoNormal().negate();
-        }
-        state.storePhoton(state.getRay().getDirection(), power, kd);
-        double avg = kd.getAverage();
-        double rnd = state.getRandom(0, 0, 1);
-        if (rnd < avg) {
-            // photon is scattered
-            power.mul(kd).mul(1 / (float) avg);
-            OrthoNormalBasis onb = OrthoNormalBasis.makeFromW(state.getNormal());
-            double u = 2 * Math.PI * rnd / avg;
-            double v = state.getRandom(0, 1, 1);
-            float s = (float) Math.sqrt(v);
-            float s1 = (float) Math.sqrt(1.0 - v);
-            Vector3 w = new Vector3((float) Math.cos(u) * s, (float) Math.sin(u) * s, s1);
-            w = onb.transform(w, new Vector3());
-            state.traceDiffusePhoton(new Ray(state.getPoint(), w), power);
-        }
-    }
-    
-    private Color radiance = Color.WHITE;
-    
-    public Color getRadiance(ShadingState state) {
-        Color kd = Color.WHITE;
-        // make sure we are on the right side of the material
-        state.faceforward();
-        // setup lighting
-        state.initLightSamples();
-        state.initCausticSamples();
-        return state.diffuse(kd);
+    	double t = getDistToObjects(new Vector3(r.ox, r.oy, r.oz), new Vector3(r.dx, r.dy, r.dz));
+		if (t < stopDelta && (r.getMax() > t || r.getMax() == Float.POSITIVE_INFINITY))
+			state.setIntersection(0, (float)t, 0);
     }
     
 	@Override
