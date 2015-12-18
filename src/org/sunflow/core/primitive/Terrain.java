@@ -3,10 +3,15 @@ package org.sunflow.core.primitive;
 import org.sunflow.SunflowAPI;
 import org.sunflow.core.Instance;
 import org.sunflow.core.IntersectionState;
+import org.sunflow.core.LightSample;
+import org.sunflow.core.LightSource;
 import org.sunflow.core.ParameterList;
 import org.sunflow.core.PrimitiveList;
 import org.sunflow.core.Ray;
+import org.sunflow.core.Shader;
 import org.sunflow.core.ShadingState;
+import org.sunflow.core.shader.TerrainShader;
+import org.sunflow.image.Color;
 import org.sunflow.math.BoundingBox;
 import org.sunflow.math.Matrix4;
 import org.sunflow.math.Noise;
@@ -14,7 +19,7 @@ import org.sunflow.math.OrthoNormalBasis;
 import org.sunflow.math.Point3;
 import org.sunflow.math.Vector3;
 
-public class Terrain implements PrimitiveList {
+public class Terrain implements PrimitiveList, Shader {
 	private float eps = 0.01f;
 
     public Terrain() {
@@ -56,34 +61,44 @@ public class Terrain implements PrimitiveList {
 		return x + (y - x) * t;
 	}
 	
-	private double height(double x, double y) {
+	private double rockHeight(double x, double y) {
 		double height = 0.0;
+
+		double mountain = Noise.simplexNoise(x, y, 7, 1.0, 0.4, 0.001, 3);
+		mountain = Math.pow(mountain, 2) * 50;
+		mountain = lerp(mountain, roundTo(mountain, 20.0f), 0.25);
+		height += mountain;
 		
-		double mountain = Noise.simplexNoise(x, y, 8, 1.0, 0.4, 0.001, 3);
-		mountain = Math.pow(mountain, 2) * 24;
-		mountain = lerp(mountain, roundTo(mountain, 8.0f), 0.25);
-		
-		double rocks = Noise.simplexNoise(x, y, 3, 1.0, 0.4, 0.05, 3);
-		rocks = Math.pow(rocks, 4) * 0.5;
-		mountain += rocks;
-		
-		
-		double sanddune = Noise.sharpNoise(x, y, 3, 15.0, 0.4, 0.001, 3);
-		sanddune += Noise.simplexNoise(x, y, 2, 0.02, 0.4, 1, 3);
-		
-		height = Math.max(mountain, sanddune);
+//		double rocks = Noise.simplexNoise(x, y, 1, 1.0, 0.4, 0.02, 3);
+//		rocks = Math.pow(rocks, 10);
+//		rocks = lerp(rocks, roundTo(rocks, 0.5), 1.0);
+//		height += rocks * 3.0;
 		
 		return height;
+	}
+	
+	private double sandHeight(double x, double y) {
+		double height = 0.0;
+		
+		height = Noise.sharpNoise(x, y, 3, 15.0, 0.4, 0.001, 3);
+		height += Noise.simplexNoise(x, y, 2, 0.02, 0.4, 1, 3);
+		
+		return height;
+	}
+	
+	private double height(double x, double y) {		
+//		return rockHeight(x, y);
+		return Math.max(rockHeight(x, y), sandHeight(x, y));
 	}
 	
 	float distPlane(float x, float y, float z) {
 	    return (float) (z - height(x, y));
 	}
 	
-	int MAX_ITERATIONS = 500;
+	int MAX_ITERATIONS = 5000;
 	
 	float startDelta = 0.5f;
-	float stopDelta = 5000.0f;
+	float stopDelta = 100000.0f;
 	
 	float computeDist(float x, float y, float z) {
 	    float dist = distPlane(x, y, z);
@@ -129,7 +144,43 @@ public class Terrain implements PrimitiveList {
 			state.setIntersection(0, t, 0);
 		}
     }
-
+    
+    public void scatterPhoton(ShadingState state, Color power) {
+        Color kd = Color.WHITE;
+        // make sure we are on the right side of the material
+        if (Vector3.dot(state.getNormal(), state.getRay().getDirection()) > 0) {
+            state.getNormal().negate();
+            state.getGeoNormal().negate();
+        }
+        state.storePhoton(state.getRay().getDirection(), power, kd);
+        double avg = kd.getAverage();
+        double rnd = state.getRandom(0, 0, 1);
+        if (rnd < avg) {
+            // photon is scattered
+            power.mul(kd).mul(1 / (float) avg);
+            OrthoNormalBasis onb = OrthoNormalBasis.makeFromW(state.getNormal());
+            double u = 2 * Math.PI * rnd / avg;
+            double v = state.getRandom(0, 1, 1);
+            float s = (float) Math.sqrt(v);
+            float s1 = (float) Math.sqrt(1.0 - v);
+            Vector3 w = new Vector3((float) Math.cos(u) * s, (float) Math.sin(u) * s, s1);
+            w = onb.transform(w, new Vector3());
+            state.traceDiffusePhoton(new Ray(state.getPoint(), w), power);
+        }
+    }
+    
+    private Color radiance = Color.WHITE;
+    
+    public Color getRadiance(ShadingState state) {
+        Color kd = Color.WHITE;
+        // make sure we are on the right side of the material
+        state.faceforward();
+        // setup lighting
+        state.initLightSamples();
+        state.initCausticSamples();
+        return state.diffuse(kd);
+    }
+    
 	@Override
 	public void prepareShadingState(ShadingState state) {
         state.init();

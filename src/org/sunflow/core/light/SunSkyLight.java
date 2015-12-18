@@ -231,11 +231,14 @@ public class SunSkyLight implements LightSource, PrimitiveList, Shader {
     }
 
     public void getPhoton(double randX1, double randY1, double randX2, double randY2, Point3 p, Vector3 dir, Color power) {
-        // FIXME: not implemented
+        double u = 2 * Math.PI * randX1;
+        double s = Math.sqrt(randY1);
+        dir.set((float) (Math.cos(u) * s), (float) (Math.sin(u) * s), (float) -Math.sqrt(1.0f - randY1));
+        Color.mul((float) Math.PI * 1.0f, Color.WHITE, power);
     }
 
     public float getPower() {
-        return 0;
+        return 1000000.0f; //Color.WHITE.copy().mul((float) Math.PI * 1.0f).getLuminance();
     }
 
     public void getSamples(ShadingState state) {
@@ -271,18 +274,37 @@ public class SunSkyLight implements LightSource, PrimitiveList, Shader {
             float su = (x + u) / colHistogram.length;
             float sv = (y + v) / rowHistogram.length;
             float invP = (float) Math.sin(sv * Math.PI) * jacobian / (n * px * py);
+            
             Vector3 localDir = getDirection(su, sv);
             Vector3 dir = basis.transform(localDir, new Vector3());
+            
             if (Vector3.dot(dir, state.getGeoNormal()) > 0 && Vector3.dot(dir, state.getNormal()) > 0) {
-                LightSample dest = new LightSample();
-                dest.setShadowRay(new Ray(state.getPoint(), dir));
-                dest.getShadowRay().setMax(Float.MAX_VALUE);
-                Color radiance = getSkyRGB(localDir);
-                dest.setRadiance(radiance, radiance);
-                dest.getDiffuseRadiance().mul(invP);
-                dest.getSpecularRadiance().mul(invP);
-                dest.traceShadow(state);
-                state.addSample(dest);
+//				LightSample dest = new LightSample();
+//				dest.setShadowRay(new Ray(state.getPoint(), dir));
+//				dest.getShadowRay().setMax(Float.MAX_VALUE);
+//				
+
+//				
+//				Color radiance = getSkyRGB(sampleNorm).constrainRGB();
+//				dest.setRadiance(radiance, radiance);
+////	            dest.getDiffuseRadiance().mul(1.0f / (float)(n));
+////	            dest.getSpecularRadiance().mul(1.0f / (float)n);
+//				dest.traceShadow(state);
+//				state.addSample(dest);
+				
+//                LightSample dest = new LightSample();
+//                dest.setShadowRay(new Ray(state.getPoint(), dir));
+//                dest.getShadowRay().setMax(Float.MAX_VALUE);
+//                
+//				Vector3 sampleNorm = new Vector3((float)randX, (float)randY, 1.0f);
+//				sampleNorm.normalize();
+//                
+//                Color radiance = getSkyRGB(sampleNorm);
+//                dest.setRadiance(radiance, radiance);
+//                dest.getDiffuseRadiance().mul(invP);
+//                dest.getSpecularRadiance().mul(invP);
+//                dest.traceShadow(state);
+//                state.addSample(dest);
             }
         }
     }

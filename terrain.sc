@@ -6,30 +6,25 @@ image {
 
 camera {
   type pinhole
-  eye    -10.5945 -30.0581 30
-  target 0.0554193 0.00521195 15
+  eye    0 7000 20
+  target 0 7050 15
   up     0 0 1
   fov    90
   aspect 1.333333
 }
 
-
-light {
-  type ibl
-  image sky_small.hdr
-  center 0 -1 0
-  up 0 0 1
-  lock true
-  samples 5
+gi {
+ type path
+ samples 32
 }
 
 light {
   type sunsky
   up 0 0 1
-  east 1 0 0
-  sundir 0.8 0.5 0.3
-  turbidity 0
-  samples 2
+  east 0 1 0
+  sundir 1.0 0.8 0.5
+  turbidity 1.0
+  samples 1
 }
 
 shader {
@@ -40,7 +35,7 @@ shader {
 shader {
   name Diffuse
   type diffuse
-  diff 1.0 0.5 0.5
+  diff 1.0 1.0 1.0
 }
 
 object {

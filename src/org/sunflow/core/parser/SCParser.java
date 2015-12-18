@@ -622,7 +622,7 @@ public class SCParser implements SceneParser {
                 api.parameter("samples", p.getNextInt());
             api.shader(name, new UberShader());
         } else if (p.peekNextToken("terrain")) {
-        	api.shader(name, new TerrainShader());
+        	api.shader(name, new TerrainShader(true));
         } else
             UI.printWarning(Module.API, "Unrecognized shader type: %s", p.getNextToken());
         p.checkNextToken("}");
@@ -984,7 +984,11 @@ public class SCParser implements SceneParser {
             api.geometry(name, (Tesselatable) new BezierMesh());
         } else if (type.equals("terrain")) {
             UI.printInfo(Module.API, "Reading terrain ...");
-            api.geometry(name, new Terrain());
+            Terrain t = new Terrain();
+            api.geometry(name, t);
+//            api.shader(name + ".shader", t);
+//            api.parameter("shaders", name + ".shader");
+//            api.instance(name + ".instance", name);
         } else {
             UI.printWarning(Module.API, "Unrecognized object type: %s", p.getNextToken());
             noInstance = true;

@@ -12,9 +12,11 @@ import org.sunflow.math.Vector3;
 
 public class TerrainShader implements Shader {
     private Color diff;
+    private boolean heightShade;
 
-    public TerrainShader() {
-        diff = new Color();
+    public TerrainShader(boolean heightShade) {
+        this.diff = new Color();
+        this.heightShade = heightShade;
     }
 
     public boolean update(ParameterList pl, SunflowAPI api) {
@@ -31,11 +33,17 @@ public class TerrainShader implements Shader {
     	Color sand = new Color(230f / 256f, 215f / 256f, 114f / 256f);
 //    	Color sand = new Color(0f, 0f, 1f);
     	
-    	Color baseBlend = Color.blend(dirt, sand, Math.max(Math.min(n.z * n.z * n.z * 0.8f, 1f), 0f));
+    	Color color = Color.blend(dirt, sand, Math.max(Math.min(n.z * n.z * n.z * 0.8f, 1f), 0f));
     	
-    	Color heightBlend = Color.blend(baseBlend, dirt, Math.max(Math.min(p.z / 10f, 1f), 0f));
+    	if (heightShade) {
+    		color = Color.blend(color, dirt, Math.max(Math.min(p.z / 30f, 1f), 0f));
+    	}
     	
-        return heightBlend;
+    	if (Math.random() < 0.1) {
+    		Color.mul(2.0f, color, color);
+    	}
+    	
+        return color;
     }
 
     public Color getRadiance(ShadingState state) {
